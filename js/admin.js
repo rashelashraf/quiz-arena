@@ -7,7 +7,11 @@ import {
   DEFAULT_SETTINGS, QUESTION_TYPES, parseStudents, parseQuestions, drawStudents,
   computeAwards, toCsv, download, slug, rid
 } from './model.js';
+<<<<<<< HEAD
 import { grade, score, preview, DIFFICULTY_NAMES, brierMean, calibrationBuckets } from './scoring.js';
+=======
+import { grade, score, DIFFICULTY_NAMES, brierMean, calibrationBuckets } from './scoring.js';
+>>>>>>> c64610bbec40aad31db5dc28fe0276d69f793f4e
 import { el, $, $$, answerWidget, confidenceWidget, questionMeta, typeLabel, describeAnswer, sfx, toast, LETTERS } from './render.js';
 
 const state = {
@@ -23,7 +27,10 @@ const state = {
   results: [],
   prizes: [],
   seats: [],
+<<<<<<< HEAD
   responseError: null,
+=======
+>>>>>>> c64610bbec40aad31db5dc28fe0276d69f793f4e
   section: 'run',
   filters: { topic: '', difficulty: '', type: '' },
   teacherEntry: {}          // studentId -> { answer, confidence } when typing for the class
@@ -210,6 +217,7 @@ function watchResponses() {
   if (respUnsub) { respUnsub(); respUnsub = null; }
   const roundId = state.live?.roundId;
   if (!roundId) { state.responses = []; return; }
+<<<<<<< HEAD
   state.responseError = null;
   respUnsub = watchList(
     `classes/${state.classId}/rounds/${roundId}/responses`,
@@ -223,6 +231,12 @@ function watchResponses() {
       if (state.section === 'run') render();
     }
   );
+=======
+  respUnsub = watchList(`classes/${state.classId}/rounds/${roundId}/responses`, (rows) => {
+    state.responses = rows;
+    if (state.section === 'run') render();
+  });
+>>>>>>> c64610bbec40aad31db5dc28fe0276d69f793f4e
 }
 
 function updatePoolNote() {
@@ -274,6 +288,7 @@ function renderRun() {
 
   /* left: who is up */
   const left = el('div', { class: 'stack' });
+<<<<<<< HEAD
   const per = Math.max(1, live.questionsPerRound || state.settings.questionsPerRound || 1);
   left.appendChild(el('h2', { text: live.phase === 'idle'
     ? 'Who is next'
@@ -286,6 +301,12 @@ function renderRun() {
     left.appendChild(el('p', { class: 'muted tiny', text:
       `${state.settings.drawCount} students, drawn ${state.settings.drawMode === 'fair' ? 'with a nudge towards whoever has had fewest turns' : 'at random'}` +
       (qpr > 1 ? `, facing ${qpr} questions each.` : '.') }));
+=======
+  left.appendChild(el('h2', { text: live.phase === 'idle' ? 'Who is next' : `Round ${live.roundNo || 1}` }));
+
+  if (live.phase === 'idle') {
+    left.appendChild(el('p', { class: 'muted tiny', text: `${state.settings.drawCount} students, drawn ${state.settings.drawMode === 'fair' ? 'with a nudge towards whoever has had fewest turns' : 'at random'}.` }));
+>>>>>>> c64610bbec40aad31db5dc28fe0276d69f793f4e
     left.appendChild(el('button', { class: 'btn-primary btn-big', onclick: doDraw, text: 'Draw students' }));
   } else {
     (live.drawn || []).forEach((p, i) => {
@@ -309,8 +330,11 @@ function renderRun() {
     }
   }
 
+<<<<<<< HEAD
   left.appendChild(attendancePanel());
 
+=======
+>>>>>>> c64610bbec40aad31db5dc28fe0276d69f793f4e
   const resting = state.students.filter((s) => s.resting);
   if (resting.length) {
     left.appendChild(el('div', { class: 'panel', style: 'padding:14px 16px' }, [
@@ -335,9 +359,13 @@ function renderRun() {
   /* right: scoreboard */
   const right = el('div', { class: 'panel' }, [el('h3', { text: 'Scoreboard' })]);
   const board = el('div', { class: 'lb' });
+<<<<<<< HEAD
   const ranked = [...state.students]
     .filter((s) => s.active !== false)
     .sort((a, b) => (b.score || 0) - (a.score || 0));
+=======
+  const ranked = [...state.students].sort((a, b) => (b.score || 0) - (a.score || 0));
+>>>>>>> c64610bbec40aad31db5dc28fe0276d69f793f4e
   ranked.slice(0, 14).forEach((s, i) => {
     board.appendChild(el('div', { class: `lb-row ${i === 0 && s.score ? 'lead' : ''} ${s.resting ? 'rest' : ''}` }, [
       el('span', { class: 'rk', text: String(i + 1) }),
@@ -352,6 +380,7 @@ function renderRun() {
   root.appendChild(stage);
 }
 
+<<<<<<< HEAD
 /**
  * Marking who is absent belongs at the start of a lesson, next to the draw,
  * not three screens away on the class list. Held-out students are skipped by
@@ -395,6 +424,8 @@ function attendancePanel() {
   return box;
 }
 
+=======
+>>>>>>> c64610bbec40aad31db5dc28fe0276d69f793f4e
 function nextQuestionPicker() {
   const box = el('div', { class: 'panel' });
   box.appendChild(el('div', { class: 'panel-head' }, [
@@ -476,10 +507,14 @@ function leastUsed(pool) {
 function liveQuestionCard(live) {
   const q = live.question;
   const card = el('div', { class: 'qcard' });
+<<<<<<< HEAD
   const perRound = Math.max(1, live.questionsPerRound || 1);
   card.appendChild(questionMeta(q, [el('span', { class: 'tag', text: perRound > 1
     ? `Round ${live.roundNo || 1} · Q${live.questionNo || 1}/${perRound}`
     : `Round ${live.roundNo || 1}` })]));
+=======
+  card.appendChild(questionMeta(q, [el('span', { class: 'tag', text: `Round ${live.roundNo || 1}` })]));
+>>>>>>> c64610bbec40aad31db5dc28fe0276d69f793f4e
   card.appendChild(el('div', { class: 'qtext', text: q.text }));
   if (q.image) card.appendChild(el('img', { src: q.image, alt: '', style: 'max-width:100%;border-radius:8px;margin-bottom:16px' }));
 
@@ -497,6 +532,7 @@ function liveQuestionCard(live) {
   } else if (state.settings.answerMode === 'teacher') {
     card.appendChild(teacherEntryPanel(live));
   } else {
+<<<<<<< HEAD
     if (state.responseError) {
       card.appendChild(el('div', { class: 'notice notice-bad' }, [
         el('div', { text: `Cannot read the answers coming in: ${state.responseError.code}. Do not reveal yet — everyone would be marked wrong.` }),
@@ -532,6 +568,18 @@ function liveQuestionCard(live) {
     });
     table.appendChild(body);
     card.appendChild(table);
+=======
+    card.appendChild(el('div', { class: 'notice notice-ok' },
+      `${state.responses.length} of ${(live.drawn || []).length} answers in. Students are answering on their own devices.`));
+    card.appendChild(el('div', { class: 'stack' },
+      (live.drawn || []).map((p) => {
+        const r = state.responses.find((x) => x.id === p.id);
+        return el('div', { class: 'row', style: 'justify-content:space-between;border-bottom:1px solid var(--line-soft);padding:6px 0' }, [
+          el('span', { text: p.name }),
+          el('span', { class: r ? 'tag tag-jade' : 'tag', text: r ? 'answered' : 'waiting' })
+        ]);
+      })));
+>>>>>>> c64610bbec40aad31db5dc28fe0276d69f793f4e
   }
 
   const controls = el('div', { class: 'row wrap', style: 'margin-top:20px' });
@@ -541,6 +589,7 @@ function liveQuestionCard(live) {
       el('button', { onclick: cancelRound, text: 'Cancel this round' })
     );
   } else if (live.phase === 'revealed') {
+<<<<<<< HEAD
     const left = questionsLeft(live);
     if (left > 0) {
       controls.append(
@@ -554,6 +603,12 @@ function liveQuestionCard(live) {
       controls.append(el('button', { class: 'btn-go btn-big', onclick: nextRound, text: 'Next round' }));
     }
     controls.append(el('button', { onclick: undoRound, class: 'btn-danger', text: 'Undo the scoring' }));
+=======
+    controls.append(
+      el('button', { class: 'btn-go btn-big', onclick: nextRound, text: 'Next round' }),
+      el('button', { onclick: undoRound, class: 'btn-danger', text: 'Undo the scoring' })
+    );
+>>>>>>> c64610bbec40aad31db5dc28fe0276d69f793f4e
   }
   card.appendChild(controls);
   return card;
@@ -651,9 +706,12 @@ async function doDraw() {
     results: null,
     revealKey: null,
     drawn: picked.map((s) => ({ id: s.id, name: s.name })),
+<<<<<<< HEAD
     questionNo: 0,
     questionsPerRound: Math.max(1, Number(state.settings.questionsPerRound) || 1),
     pendingRest: [],
+=======
+>>>>>>> c64610bbec40aad31db5dc28fe0276d69f793f4e
     settings: state.settings,
     drawnAt: Date.now()
   }, { merge: false });
@@ -662,6 +720,7 @@ async function doDraw() {
 async function ask(q) {
   if (!q) return;
   let live = state.live;
+<<<<<<< HEAD
   if (!live || live.phase === 'idle' || !live.drawn?.length || roundIsOver(live)) {
     await doDraw();
     live = await get(`classes/${state.classId}/live/now`);
@@ -669,6 +728,13 @@ async function ask(q) {
   }
   const roundId = rid('round');
   const questionNo = (live.questionNo || 0) + 1;
+=======
+  if (!live || live.phase === 'idle' || live.phase === 'revealed' || !live.drawn?.length) {
+    await doDraw();
+    live = await get(`classes/${state.classId}/live/now`);
+  }
+  const roundId = rid('round');
+>>>>>>> c64610bbec40aad31db5dc28fe0276d69f793f4e
   state.teacherEntry = {};
 
   await set(`classes/${state.classId}/rounds/${roundId}`, {
@@ -679,7 +745,10 @@ async function ask(q) {
   await set(`classes/${state.classId}/live/now`, {
     phase: 'asking',
     roundId,
+<<<<<<< HEAD
     questionNo,
+=======
+>>>>>>> c64610bbec40aad31db5dc28fe0276d69f793f4e
     questionId: q.id,
     question: q,
     results: null,
@@ -698,6 +767,7 @@ async function reveal() {
   const key = state.keys[q.id] || await get(`classes/${state.classId}/keys/${q.id}`);
   if (!key) { toast('The answer key for this question is missing.', 'bad'); return; }
 
+<<<<<<< HEAD
   if (state.responseError) {
     toast('The answers cannot be read right now. Fix that before revealing, or everyone will be scored as wrong.', 'bad');
     return;
@@ -712,6 +782,8 @@ async function reveal() {
   const per = Math.max(1, live.questionsPerRound || 1);
   const lastOfRound = (live.questionNo || 1) >= per;
 
+=======
+>>>>>>> c64610bbec40aad31db5dc28fe0276d69f793f4e
   const results = [];
   for (const p of live.drawn || []) {
     let answer = null, confidence = state.settings.rule === 'calibration' ? 50 : 1;
@@ -745,9 +817,13 @@ async function reveal() {
       wrong: (s.wrong || 0) + (r.correct ? 0 : 1),
       streak,
       bestStreak: Math.max(s.bestStreak || 0, streak),
+<<<<<<< HEAD
       resting: r.correct && state.settings.restOnCorrect && lastOfRound
         ? true
         : (s.resting || false),
+=======
+      resting: r.correct && state.settings.restOnCorrect ? true : (s.resting || false),
+>>>>>>> c64610bbec40aad31db5dc28fe0276d69f793f4e
       lastRound: live.roundId
     });
     await set(`classes/${state.classId}/results/${live.roundId}--${r.studentId}`, {
@@ -768,6 +844,7 @@ async function reveal() {
     }
   } catch { /* nobody answered along */ }
 
+<<<<<<< HEAD
   // Anyone who got one right this round sits out afterwards, but not until
   // the round has finished.
   const earnedRest = state.settings.restOnCorrect
@@ -779,11 +856,16 @@ async function reveal() {
   await set(`classes/${state.classId}/live/now`, {
     phase: 'revealed', results, revealKey: key, classStat, pendingRest
   });
+=======
+  await set(`classes/${state.classId}/questions/${q.id}`, { asked: (q.asked || 0) + 1 });
+  await set(`classes/${state.classId}/live/now`, { phase: 'revealed', results, revealKey: key, classStat });
+>>>>>>> c64610bbec40aad31db5dc28fe0276d69f793f4e
 
   state.results = await list(`classes/${state.classId}/results`);
   results.some((r) => r.correct) ? sfx.right() : sfx.wrong();
 }
 
+<<<<<<< HEAD
 /** Every question the drawn students were going to face has been asked. */
 function roundIsOver(live) {
   const per = Math.max(1, live.questionsPerRound || 1);
@@ -812,6 +894,11 @@ async function nextRound() {
   await set(`classes/${state.classId}/live/now`, {
     phase: 'idle', drawn: [], results: null, question: null, questionId: null,
     roundId: null, revealKey: null, questionNo: 0, pendingRest: []
+=======
+async function nextRound() {
+  await set(`classes/${state.classId}/live/now`, {
+    phase: 'idle', drawn: [], results: null, question: null, questionId: null, roundId: null, revealKey: null
+>>>>>>> c64610bbec40aad31db5dc28fe0276d69f793f4e
   });
   state.teacherEntry = {};
 }
@@ -926,7 +1013,11 @@ function renderStudents() {
   table.appendChild(el('thead', {}, el('tr', {}, [
     el('th', { text: 'Name' }), el('th', { text: 'Id' }), el('th', { text: 'Group' }),
     el('th', { class: 'num', text: 'Points' }), el('th', { class: 'num', text: 'Turns' }),
+<<<<<<< HEAD
     el('th', { text: 'Attendance' }), el('th', { text: 'Phone' }), el('th', {})
+=======
+    el('th', { text: 'In the draw' }), el('th', { text: 'Phone' }), el('th', {})
+>>>>>>> c64610bbec40aad31db5dc28fe0276d69f793f4e
   ])));
   const body = el('tbody');
   state.students.forEach((s) => {
@@ -936,6 +1027,7 @@ function renderStudents() {
       el('td', { text: s.group || '—' }),
       el('td', { class: 'num', text: String(s.score || 0) }),
       el('td', { class: 'num', text: String(s.turns || 0) }),
+<<<<<<< HEAD
       el('td', {}, el('div', { class: 'row', style: 'gap:8px' }, [
         el('button', {
           class: 'tiny',
@@ -947,6 +1039,12 @@ function renderStudents() {
           : s.resting
             ? el('span', { class: 'tag tag-gold', text: 'sitting out' })
             : el('span', { class: 'tag tag-jade', text: 'in' })
+=======
+      el('td', {}, el('label', { class: 'check', style: 'margin:0' }, [
+        el('input', { type: 'checkbox', checked: s.active !== false && !s.resting,
+          onchange: (e) => set(`classes/${state.classId}/students/${s.id}`, { active: e.target.checked, resting: false }) }),
+        el('span', { class: 'tiny', text: s.resting ? 'sitting out' : (s.active === false ? 'away' : 'yes') })
+>>>>>>> c64610bbec40aad31db5dc28fe0276d69f793f4e
       ])),
       el('td', {}, seatCell(s)),
       el('td', {}, el('button', { class: 'tiny btn-danger', onclick: () => removeStudent(s), text: 'Remove' }))
@@ -1418,11 +1516,14 @@ function renderSettings() {
       el('input', { type: 'number', min: '1', max: '8', value: String(s.drawCount), onchange: (e) => { s.drawCount = Number(e.target.value); } })
     ]),
     el('div', {}, [
+<<<<<<< HEAD
       el('label', { text: 'Questions per round' }),
       el('input', { type: 'number', min: '1', max: '10', value: String(s.questionsPerRound || 1),
         onchange: (e) => { s.questionsPerRound = Math.max(1, Number(e.target.value) || 1); } })
     ]),
     el('div', {}, [
+=======
+>>>>>>> c64610bbec40aad31db5dc28fe0276d69f793f4e
       el('label', { text: 'How they are picked' }),
       el('select', { onchange: (e) => { s.drawMode = e.target.value; } }, [
         el('option', { value: 'fair', text: 'Leans towards whoever has had fewest turns', selected: s.drawMode === 'fair' }),
@@ -1439,7 +1540,11 @@ function renderSettings() {
   ]));
   draw.appendChild(el('label', { class: 'check', style: 'margin-top:12px' }, [
     el('input', { type: 'checkbox', checked: s.restOnCorrect, onchange: (e) => { s.restOnCorrect = e.target.checked; } }),
+<<<<<<< HEAD
     el('span', { text: 'A student who answers correctly sits out the next draws until you bring them back. With more than one question per round, this waits until the round is over.' })
+=======
+    el('span', { text: 'A student who answers correctly sits out the next draws until you bring them back' })
+>>>>>>> c64610bbec40aad31db5dc28fe0276d69f793f4e
   ]));
   draw.appendChild(el('label', { class: 'check' }, [
     el('input', { type: 'checkbox', checked: s.sound !== false, onchange: (e) => { s.sound = e.target.checked; } }),
