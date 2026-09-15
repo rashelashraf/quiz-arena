@@ -7,7 +7,21 @@
 <link rel="stylesheet" href="css/app.css">
 </head>
 <body>
-<div class="shell">
+<div id="gate" class="hidden" style="max-width:460px;margin:0 auto;padding:10vh 24px">
+  <h1 style="font-size:2rem">Teacher sign-in</h1>
+  <p class="muted" id="gate-why">The console is only open to teacher accounts.</p>
+  <div class="panel" style="margin-top:20px">
+    <div class="field"><label for="g-email">Email</label><input type="text" id="g-email" autocomplete="username"></div>
+    <div class="field"><label for="g-pw">Password</label><input type="password" id="g-pw" autocomplete="current-password"></div>
+    <button id="g-signin" class="btn-primary btn-big" style="width:100%;justify-content:center">Sign in</button>
+    <div id="g-note" class="tiny muted" style="margin-top:14px"></div>
+  </div>
+  <p class="tiny" style="margin-top:18px">
+    <a href="index.html">Back to the start</a> · <a href="diagnose.html">Connection check</a>
+  </p>
+</div>
+
+<div class="shell" id="shell">
   <nav class="rail" aria-label="Sections">
     <a class="brand" href="index.html" style="text-decoration:none">Quiz&nbsp;<span>Arena</span></a>
     <button data-go="run" aria-current="page">Run the quiz</button>

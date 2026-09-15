@@ -8,6 +8,7 @@
 
 import { initDb, get, list, watchDoc, watchList } from './db.js';
 import { el, $, LETTERS, sfx } from './render.js';
+import { qrSvg } from './qr.js';
 
 const root = $('#board');
 const params = new URLSearchParams(location.search);
@@ -69,11 +70,29 @@ function draw() {
 
 function idleScreen() {
   const wrap = el('div', { class: 'board-grid' });
-  wrap.appendChild(el('div', { class: 'board-q' }, [
+  const main = el('div', { class: 'board-q' }, [
     el('div', { class: 'board-label', text: state.cls?.name || '' }),
-    el('div', { class: 'qtext', text: leader() ? `${leader().name} is ahead` : 'Ready when you are' }),
-    el('p', { style: 'font-size:1.2rem;color:rgba(244,247,249,.6);max-width:30ch', text: 'Two names are about to come up.' })
+    el('div', { class: 'qtext', text: leader() ? `${leader().name} is ahead` : 'Ready when you are' })
+  ]);
+
+  // Between rounds the screen is idle, which is exactly when latecomers need
+  // the join link. Scanning beats reading a URL out to thirty phones.
+  const joinUrl = new URL('play.html', location.href).href;
+  const joinRow = el('div', { class: 'row', style: 'gap:24px;align-items:center;margin-top:2vh' });
+  try {
+    const code = qrSvg(joinUrl, { scale: 5, quiet: 3, dark: '#101f33', light: '#ffffff' });
+    code.style.borderRadius = '10px';
+    code.style.background = '#fff';
+    code.style.padding = '10px';
+    joinRow.appendChild(code);
+  } catch { /* URL too long for a code; the text below still works */ }
+  joinRow.appendChild(el('div', {}, [
+    el('div', { style: 'font-size:1.3rem;color:#fff;margin-bottom:6px', text: 'Scan to join' }),
+    el('div', { style: 'font-size:1rem;color:rgba(244,247,249,.6);word-break:break-all;max-width:26ch', text: joinUrl })
   ]));
+  main.appendChild(joinRow);
+
+  wrap.appendChild(main);
   wrap.appendChild(scoreboard());
   root.appendChild(wrap);
 }

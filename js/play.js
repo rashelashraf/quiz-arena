@@ -51,40 +51,65 @@ async function renderJoin() {
   }
 
   const box = el('div', { class: 'panel' });
-  box.appendChild(el('h2', { text: 'Join your class' }));
+  box.appendChild(el('h2', { text: 'Find your name' }));
 
   const classSel = el('select', {}, classes.map((c) =>
     el('option', { value: c.id, text: c.name || c.id, selected: c.id === state.classId })));
-  const nameSel = el('select', {}, [el('option', { text: 'Choose a class first' })]);
 
-  const fillNames = async () => {
-    const students = (await list(`classes/${classSel.value}/students`))
-      .sort((a, b) => (a.name || '').localeCompare(b.name || ''));
-    nameSel.textContent = '';
-    nameSel.appendChild(el('option', { value: '', text: students.length ? 'Find your name' : 'No students in this class yet' }));
-    students.forEach((s) => nameSel.appendChild(el('option', { value: s.id, text: `${s.name} (${s.id})` })));
+  const search = el('input', { type: 'search', placeholder: 'Start typing your name', autocomplete: 'off' });
+  const names = el('div', { class: 'stack', style: 'margin-top:12px;max-height:46vh;overflow-y:auto' });
+  let roster = [];
+
+  const paint = () => {
+    const q = search.value.trim().toLowerCase();
+    const shown = roster.filter((s) => !q || s.name.toLowerCase().includes(q) || s.id.toLowerCase().includes(q));
+    names.textContent = '';
+    if (!roster.length) {
+      names.appendChild(el('p', { class: 'muted', text: 'Nobody is on this class list yet. Ask your teacher.' }));
+      return;
+    }
+    if (!shown.length) {
+      names.appendChild(el('p', { class: 'muted', text: 'No name matches that.' }));
+      return;
+    }
+    shown.slice(0, 60).forEach((s) => {
+      names.appendChild(el('button', {
+        class: 'opt', style: 'width:100%;text-align:left;font-size:var(--step-1);padding:14px 16px',
+        onclick: () => pick(s)
+      }, [
+        el('span', { class: 'grow', text: s.name }),
+        el('span', { class: 'tiny muted', text: s.id })
+      ]));
+    });
   };
-  classSel.addEventListener('change', fillNames);
-  await fillNames();
+
+  const load = async () => {
+    names.textContent = '';
+    names.appendChild(el('p', { class: 'muted', text: 'Loading the class list…' }));
+    roster = (await list(`classes/${classSel.value}/students`))
+      .sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+    paint();
+  };
+
+  async function pick(student) {
+    state.classId = classSel.value;
+    state.studentId = student.id;
+    localStorage.setItem('quizarena:play:class', state.classId);
+    localStorage.setItem('quizarena:play:student', state.studentId);
+    await claimSeat();
+    await joinExisting();
+  }
+
+  classSel.addEventListener('change', load);
+  search.addEventListener('input', paint);
 
   box.append(
     el('div', { class: 'field' }, [el('label', { text: 'Class' }), classSel]),
-    el('div', { class: 'field' }, [el('label', { text: 'Your name' }), nameSel]),
-    el('button', {
-      class: 'btn-primary btn-big', style: 'width:100%;justify-content:center',
-      onclick: async () => {
-        if (!nameSel.value) { toast('Pick your name from the list.', 'warn'); return; }
-        state.classId = classSel.value;
-        state.studentId = nameSel.value;
-        localStorage.setItem('quizarena:play:class', state.classId);
-        localStorage.setItem('quizarena:play:student', state.studentId);
-        await claimSeat();
-        await joinExisting();
-      },
-      text: 'That is me'
-    })
+    el('div', { class: 'field', style: 'margin-bottom:0' }, [el('label', { text: 'Your name' }), search]),
+    names
   );
   app.appendChild(box);
+  await load();
 }
 
 async function claimSeat() {

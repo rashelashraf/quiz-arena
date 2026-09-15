@@ -46,26 +46,33 @@ a different machine from your laptop.
    it into `js/config.js`.
 5. **Firestore → Rules.** Replace everything with the contents of
    `firestore.rules`, then publish.
-6. **Authentication → Users → Add user.** Make one account for yourself with
-   an email and a password. This is your teacher login.
-7. Open the site, and on the home page sign in with that email and password.
-8. Press **Claim teacher access**, then **Close the teacher list**. Until you
-   close it, anyone opening the link could claim teacher access too, so do this
-   before you hand the link to a class.
+6. **Authentication → Users → Add user.** Make an account for yourself with
+   an email and a password. Copy the **User UID** shown in that list.
+7. **Firestore → Start collection → `admins` → Add document.** Paste the UID as
+   the **document ID**. Any field inside will do; the ID is what counts.
+8. Open the site and sign in with that email and password.
+
+Only accounts listed in `admins` can open the teacher console, and the only way
+onto that list is through the Firebase console. The app itself cannot add
+anyone, so publishing the site does not put the console at risk. Students never
+sign in at all — they are signed in anonymously in the background, pick their
+name from the class list, and play.
 
 ### Teaching from more than one machine
 
-Sign in with the teacher account from step 6. Anonymous sign-in gives every
-browser a separate identity, so your laptop, the projector and a staffroom
-machine would each count as a different person and each would need its own
-entry in the `admins` collection. An email account is one identity that works
-on all of them, and survives clearing the browser.
+Sign in with the same teacher account. One account works on your laptop, the
+projector and any other machine, and survives clearing the browser. For a
+colleague, make them a second account and add its UID to `admins` the same way.
 
-You only claim teacher access once, for the account. After that, signing in on
-any machine is enough.
+### What students do
 
-For a colleague, make them a second account in the console and add its **user
-UID** — shown in the Users list — as a document ID in the `admins` collection.
+Give them the `play.html` link, or let them scan the code that the big screen
+shows between rounds. They pick their class, find their name in the list, and
+that is it — no account, no password, nothing to install. The phone remembers
+who they are, so they only do it once.
+
+While two students are on the spot, everyone else can answer along on their own
+phone for practice. Those answers are stored separately and never scored.
 
 The web config keys are meant to be public. The rules are what protect the data,
 which is why step 5 matters more than it looks.
@@ -83,9 +90,8 @@ first thing that is wrong, with the fix. The usual culprits:
 | `permission-denied` | The rules are still the default locked-mode set. Paste `firestore.rules` in and press Publish |
 | `unavailable` | No Firestore database yet. Firestore Database → Create database → **Native** mode |
 | `not-found` | The database has a name other than `(default)`. Put that name in `FIRESTORE_DATABASE_ID` in `js/config.js` |
-| Connects, but nothing saves | Signed in fine, but this device is not a teacher. Sign in with the teacher account and claim access |
-| **Claim teacher access** is refused | The rules published in Firebase are older than `firestore.rules` in this repo. Paste them in again and press Publish |
-| Teacher on one machine, not another | You are signed in anonymously. Use the email account instead; see above |
+| Console asks you to sign in | Expected. Use the teacher account from step 6 |
+| Signs in, still refused | That account's UID is not in `admins`. The sign-in screen shows the UID to copy |
 
 That last one is the one that catches people, because it looks exactly like a
 connection failure: everything loads, and then creating a class quietly does
@@ -277,6 +283,7 @@ play.html           student phones
 css/app.css         all styling
 js/config.js        your Firebase settings go here
 js/diagnose.js      the connection checks
+js/qr.js            builds the join code shown on the big screen
 js/db.js            one API over Firestore and local storage
 js/model.js         imports, validation, the draw, the awards
 js/scoring.js       grading and the two scoring rules

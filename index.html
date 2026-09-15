@@ -37,25 +37,23 @@
     <p id="status" class="muted">Checking…</p>
     <div id="uid-box" class="hidden">
       <p class="tiny muted" style="margin-bottom:6px">
-        This device's ID. To make it a teacher by hand, add a document to the
-        <code>admins</code> collection in the Firebase console whose
-        <b>document ID</b> is this value.
+        This account's ID. A teacher account only works once someone with
+        Firebase console access has added this ID as a document in the
+        <code>admins</code> collection.
       </p>
       <div class="row wrap">
         <input type="text" id="uid" readonly style="font-family:ui-monospace,monospace;max-width:340px">
         <button id="copy">Copy</button>
-        <button id="claim" class="btn-primary hidden">Claim teacher access</button>
         <button id="recheck">Check again</button>
       </div>
     </div>
     <div id="signin-box" class="hidden" style="margin-top:18px;padding-top:16px;border-top:1px solid var(--line)">
-      <h3 style="margin-bottom:4px">Teaching from more than one machine?</h3>
+      <h3 style="margin-bottom:4px">Teacher sign-in</h3>
       <p class="tiny muted">
-        Anonymous sign-in gives each browser its own ID, so a laptop, the
-        projector and a staffroom machine would each count as a different
-        person. Sign in with a teacher account instead and the same identity
-        follows you everywhere. Create the account once in the Firebase
-        console under Authentication, Users, Add user.
+        The console is only open to accounts on the teacher list, which is
+        managed from the Firebase console. Students never sign in — they pick
+        their name and play. The same teacher account works on your laptop,
+        the projector and any other machine.
       </p>
       <div class="field-row" style="margin-top:10px">
         <div><label for="email">Email</label><input type="text" id="email" autocomplete="username"></div>
@@ -69,13 +67,6 @@
       <button id="signout" class="btn-ghost tiny">Sign out</button>
     </div>
 
-    <div id="lock-box" class="hidden" style="margin-top:14px">
-      <div class="notice notice-warn">
-        The teacher list is still open, so anyone opening this link could make
-        themselves a teacher. Close it before you hand the link to a class.
-      </div>
-      <button id="lock">Close the teacher list</button>
-    </div>
     <p class="tiny" style="margin-top:14px">
       Something not working? <a href="diagnose.html">Run the connection check</a>.
     </p>
@@ -88,7 +79,7 @@
 </main>
 
 <script type="module">
-import { initDb, db, hasCloudConfig, refreshRole, claimAdmin, adminsLocked, lockAdmins, signInTeacher, signOutTeacher } from './js/db.js';
+import { initDb, db, hasCloudConfig, refreshRole, signInTeacher, signOutTeacher } from './js/db.js';
 import { $, toast } from './js/render.js';
 
 const status = $('#status');
@@ -104,22 +95,14 @@ if (db.mode === 'cloud' && db.isAdmin) {
   status.innerHTML = problem('Signed in to Firebase, but the database would not answer, so nothing will save.');
   showUid();
 } else if (db.mode === 'cloud') {
-  status.innerHTML = 'Connected to Firebase, but this device is not a teacher yet, so the console cannot save anything.';
-  showUid();
-  // Show the claim button unless the list is known to be closed. If the check
-  // itself is refused, the published rules are the old ones, and pressing the
-  // button says so clearly — better than a button that quietly hides.
-  let closed = false;
-  try { closed = await adminsLocked(); } catch { closed = false; }
-  if (!closed) $('#claim').classList.remove('hidden');
+  status.innerHTML = db.isAnonymous
+    ? 'Connected to Firebase. Students can play from here. Sign in below to run a quiz.'
+    : 'Signed in, but this account is not on the teacher list, so the console stays locked.';
+  if (!db.isAnonymous) showUid();
 } else if (hasCloudConfig()) {
   status.innerHTML = problem('Firebase is set up in js/config.js but did not start, so this device is working on its own.');
 } else {
   status.innerHTML = 'Running on this device only. Nothing is shared with student phones yet — paste your Firebase settings into <code>js/config.js</code> to turn that on. Everything else works as normal.';
-}
-
-if (db.mode === 'cloud' && db.isAdmin) {
-  try { if (!(await adminsLocked())) $('#lock-box').classList.remove('hidden'); } catch {}
 }
 
 function showUid() {
@@ -166,27 +149,6 @@ $('#signout')?.addEventListener('click', async () => {
 $('#copy')?.addEventListener('click', async () => {
   await navigator.clipboard.writeText(db.uid);
   toast('Copied');
-});
-
-$('#claim')?.addEventListener('click', async (e) => {
-  e.target.disabled = true;
-  try {
-    await claimAdmin();
-    toast('This device is now a teacher.');
-    setTimeout(() => location.reload(), 900);
-  } catch (err) {
-    e.target.disabled = false;
-    toast(err?.code === 'permission-denied'
-      ? 'Refused. Publish the latest firestore.rules from this repo, then try again. If the teacher list is already closed, add the ID above in the Firebase console instead.'
-      : (err?.message || 'That did not work'), 'bad');
-  }
-});
-
-$('#lock')?.addEventListener('click', async (e) => {
-  if (!confirm('Close the teacher list? New teachers will then have to be added from the Firebase console.')) return;
-  e.target.disabled = true;
-  try { await lockAdmins(); toast('Teacher list closed.'); setTimeout(() => location.reload(), 900); }
-  catch (err) { e.target.disabled = false; toast(err?.message || 'That did not work', 'bad'); }
 });
 
 $('#recheck')?.addEventListener('click', async () => {

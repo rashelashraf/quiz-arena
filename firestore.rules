@@ -20,9 +20,9 @@ service cloud.firestore {
     }
 
     // A teacher is anyone with a document in `admins` named after their UID.
-    // Easiest way to get the first one: open diagnose.html and press
-    // "Claim teacher access". You can also add one by hand in the console,
-    // as admins / <the uid> / { anything }.
+    // Firebase console: Authentication, Users shows each account's UID.
+    // Copy it, then Firestore, admins, Add document, paste it as the
+    // document ID. The fields inside are ignored.
     function isTeacher() {
       return signedIn() && exists(/databases/$(database)/documents/admins/$(request.auth.uid));
     }
@@ -33,24 +33,12 @@ service cloud.firestore {
         && get(/databases/$(database)/documents/classes/$(classId)/seats/$(studentId)).data.uid == request.auth.uid;
     }
 
-    // The teacher list. While it is unlocked, the first person to open the
-    // site can claim themselves as a teacher from the Connection check page,
-    // which saves hand-copying a random anonymous ID into the console. Once
-    // you press "Close the teacher list", only an existing teacher can add
-    // another, so do that before you hand the link to a class.
+    // The teacher list. Read-only from the app: the only way to become a
+    // teacher is for someone with Firebase console access to add a document
+    // here whose ID is the account's UID. Nothing the app can do grants it.
     match /admins/{uid} {
       allow read: if signedIn();
-      allow create: if signedIn()
-        && uid == request.auth.uid
-        && !exists(/databases/$(database)/documents/meta/lock);
-      allow update, delete: if isTeacher();
-    }
-
-    // Holds the single `lock` document described above.
-    match /meta/{docId} {
-      allow read: if signedIn();
-      allow create, update: if isTeacher();
-      allow delete: if false;
+      allow write: if false;
     }
 
     match /classes/{classId} {

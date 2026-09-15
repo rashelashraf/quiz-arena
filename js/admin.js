@@ -2,7 +2,7 @@
    admin.js — the teacher console.
 --------------------------------------------------------------------------- */
 
-import { initDb, db, get, set, del, list, bulkSet, watchDoc, watchList, delCollection, dumpLocal, loadLocal, explain } from './db.js';
+import { initDb, db, get, set, del, list, bulkSet, watchDoc, watchList, delCollection, dumpLocal, loadLocal, explain, signInTeacher } from './db.js';
 import {
   DEFAULT_SETTINGS, QUESTION_TYPES, parseStudents, parseQuestions, drawStudents,
   computeAwards, toCsv, download, slug, rid
@@ -63,21 +63,67 @@ $('#mode-note').textContent = db.mode === 'cloud'
       : 'Signed in, but not a teacher')
   : 'This device only';
 
+/* The console does not open at all without a teacher account. Firestore rules
+   refuse the writes anyway, but a console that loads and then silently fails
+   is worse than one that asks you to sign in. */
 if (db.mode === 'cloud' && !db.isAdmin) {
-  document.querySelector('.main').prepend(
-    el('div', { class: 'notice notice-warn' }, [
-      el('div', { text: 'You are signed in but this device is not a teacher, so nothing you do here will save.' }),
-      el('a', { href: 'index.html', class: 'tiny', text: 'Claim teacher access on the home page' })
-    ])
-  );
+  showGate();
+} else {
+  wireUp();
+  await loadClasses();
 }
 
-$$('.rail button[data-go]').forEach((b) => b.addEventListener('click', () => show(b.dataset.go)));
-$('#new-class').addEventListener('click', createClass);
-$('#first-class').addEventListener('click', createClass);
-$('#class-picker').addEventListener('change', (e) => selectClass(e.target.value));
+function showGate() {
+  $('#shell').classList.add('hidden');
+  const gate = $('#gate');
+  gate.classList.remove('hidden');
 
-await loadClasses();
+  if (db.lastError) {
+    $('#gate-why').textContent = `Firebase answered with "${db.lastError.code}" while ${db.lastError.stage}.`;
+    $('#g-note').innerHTML = `${db.lastError.hint || ''} <a href="diagnose.html">Run the connection check</a>.`;
+  } else if (!db.isAnonymous) {
+    $('#gate-why').textContent = `Signed in as ${db.email}, but that account is not on the teacher list.`;
+    $('#g-note').innerHTML = `Its ID is <code>${db.uid}</code>. Someone with Firebase console access needs to add that as a document in the <code>admins</code> collection.`;
+  }
+
+  const attempt = async () => {
+    const email = $('#g-email').value.trim();
+    const pw = $('#g-pw').value;
+    if (!email || !pw) { toast('Enter the email and password.', 'warn'); return; }
+    const btn = $('#g-signin');
+    btn.disabled = true;
+    try {
+      await signInTeacher(email, pw);
+      if (db.isAdmin) location.reload();
+      else {
+        btn.disabled = false;
+        $('#gate-why').textContent = 'That account signed in, but it is not on the teacher list.';
+        $('#g-note').innerHTML = `Its ID is <code>${db.uid}</code>. Add that as a document in the <code>admins</code> collection in the Firebase console.`;
+      }
+    } catch (err) {
+      btn.disabled = false;
+      const said = {
+        'auth/invalid-credential': 'That email and password do not match an account on this project.',
+        'auth/wrong-password': 'Wrong password.',
+        'auth/user-not-found': 'No account with that email.',
+        'auth/invalid-email': 'That does not look like an email address.',
+        'auth/too-many-requests': 'Too many attempts. Wait a minute and try again.',
+        'auth/operation-not-allowed': 'Email sign-in is switched off in the Firebase console.'
+      }[err?.code];
+      toast(said || err?.message || 'Could not sign in', 'bad');
+    }
+  };
+  $('#g-signin').addEventListener('click', attempt);
+  $('#g-pw').addEventListener('keydown', (e) => { if (e.key === 'Enter') attempt(); });
+}
+
+function wireUp() {
+
+  $$('.rail button[data-go]').forEach((b) => b.addEventListener('click', () => show(b.dataset.go)));
+  $('#new-class').addEventListener('click', createClass);
+  $('#first-class').addEventListener('click', createClass);
+  $('#class-picker').addEventListener('change', (e) => selectClass(e.target.value));
+}
 
 /* ---------- classes ----------------------------------------------------- */
 

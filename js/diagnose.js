@@ -154,7 +154,6 @@ try {
 /* 7 — teacher status --------------------------------------------------------- */
 
 let isTeacher = false;
-let locked = false;
 if (canRead) {
   const who = step('Is this device a teacher?');
   try {
@@ -164,16 +163,10 @@ if (canRead) {
     } else {
       const snap = await firestore.getDoc(firestore.doc(store, 'admins', uid));
       isTeacher = snap.exists();
-      // If this read is refused, the published rules predate the meta
-      // collection. Treat the list as open so the claim button still appears.
-      try {
-        locked = (await firestore.getDoc(firestore.doc(store, 'meta', 'lock'))).exists();
-      } catch { locked = false; }
+
       if (isTeacher) who.pass('Yes. This device can create classes and run quizzes.');
-      else if (locked) who.fail('No, and the teacher list is closed.',
-        `Add a document to the <code>admins</code> collection whose <b>document ID</b> is <code>${uid}</code>. The ID is what matters, not the fields inside.`);
-      else who.warn('Not yet, but the teacher list is still open.',
-        'Press <b>Claim teacher access</b> below, then close the list. If the claim is refused, the rules published in Firebase are older than the ones in <code>firestore.rules</code> — paste them in again and press Publish. To teach from several machines, sign in with a teacher account on the home page first.');
+      else who.warn('No. This is a student session.',
+        `Sign in with a teacher account on the home page. If you have signed in and still see this, add that account's UID as a document in the <code>admins</code> collection: Firebase console, Authentication, Users shows the UID. This session's ID is <code>${uid}</code>.`);
     }
   } catch (e) {
     who.fail(errText(e), 'Reads worked elsewhere, so this is probably a rules mismatch. Re-publish <code>firestore.rules</code>.');
@@ -196,38 +189,8 @@ if (canRead && isTeacher) {
 
 /* ---------- what to do next -------------------------------------------------- */
 
-if (canRead && !isTeacher && !locked) {
-  actions.appendChild(el('button', {
-    class: 'btn-primary btn-big',
-    onclick: async (e) => {
-      e.target.disabled = true;
-      try {
-        await firestore.setDoc(firestore.doc(store, 'admins', uid), { claimedAt: Date.now(), device: navigator.userAgent.slice(0, 140) });
-        toast('This device is now a teacher.');
-        setTimeout(() => location.reload(), 900);
-      } catch (err) {
-        e.target.disabled = false;
-        toast(errText(err), 'bad');
-        log('FAIL claim —', errText(err));
-      }
-    },
-    text: 'Claim teacher access'
-  }));
-}
-
-if (isTeacher && !locked) {
-  actions.appendChild(el('button', {
-    onclick: async (e) => {
-      if (!confirm('Close the teacher list? After this, new teachers have to be added from the Firebase console.')) return;
-      e.target.disabled = true;
-      try {
-        await firestore.setDoc(firestore.doc(store, 'meta', 'lock'), { lockedAt: Date.now(), by: uid });
-        toast('Teacher list closed.');
-        setTimeout(() => location.reload(), 900);
-      } catch (err) { e.target.disabled = false; toast(errText(err), 'bad'); }
-    },
-    text: 'Close the teacher list'
-  }));
+if (canRead && !isTeacher) {
+  actions.appendChild(el('a', { class: 'btn btn-primary', href: 'index.html', text: 'Sign in as a teacher' }));
 }
 
 if (isTeacher) actions.appendChild(el('a', { class: 'btn btn-go', href: 'admin.html', text: 'Open the teacher console' }));

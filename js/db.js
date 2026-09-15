@@ -144,27 +144,12 @@ async function checkAdmin(uid) {
   }
 }
 
-/* ---------- becoming the teacher ---------------------------------------- */
+/* ---------- teacher sign-in ---------------------------------------------- */
 
 /**
- * Claims this device as a teacher. The rules allow it only while the teacher
- * list is unlocked, which is how you get the first teacher in without hand
- * typing a random anonymous ID into the Firebase console.
- */
-export async function claimAdmin() {
-  if (db.mode !== 'cloud') { db.isAdmin = true; return true; }
-  await fs.setDoc(fs.doc(store, 'admins', db.uid), {
-    claimedAt: Date.now(),
-    device: navigator.userAgent.slice(0, 140)
-  });
-  db.isAdmin = true;
-  return true;
-}
-
-/**
- * Signs in with an email account. Anonymous IDs are tied to one browser, so a
- * teacher who moves between a laptop, a staffroom machine and the projector
- * needs an account instead: the same ID follows them everywhere.
+ * Signs in with an email account. This is the only route to the teacher
+ * console: the account's UID must already be listed in `admins`, which can
+ * only be done from the Firebase console.
  */
 export async function signInTeacher(email, password) {
   if (db.mode !== 'cloud') throw new Error('Not connected to Firebase.');
@@ -180,19 +165,6 @@ export async function signInTeacher(email, password) {
 export async function signOutTeacher() {
   if (db.mode !== 'cloud') return;
   await authMod.signOut(authInst);
-}
-
-/** True once the teacher list has been closed to new claims. */
-export async function adminsLocked() {
-  if (db.mode !== 'cloud') return false;
-  const snap = await fs.getDoc(fs.doc(store, 'meta', 'lock'));
-  return snap.exists();
-}
-
-/** Closes the teacher list. After this only an existing teacher can add more. */
-export async function lockAdmins() {
-  if (db.mode !== 'cloud') return;
-  await fs.setDoc(fs.doc(store, 'meta', 'lock'), { lockedAt: Date.now(), by: db.uid });
 }
 
 /** Everything the diagnostics page needs, without exposing the SDK itself. */
