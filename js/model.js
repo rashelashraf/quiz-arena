@@ -22,10 +22,7 @@ export const DEFAULT_SETTINGS = {
   rule: 'tiers',            // or 'calibration'
   penalty: 1,
   drawCount: 2,
-<<<<<<< HEAD
   questionsPerRound: 1,
-=======
->>>>>>> c64610bbec40aad31db5dc28fe0276d69f793f4e
   drawMode: 'fair',         // 'fair' favours students who have had fewer turns
   answerMode: 'devices',    // or 'teacher' — teacher types answers for the class
   restOnCorrect: true,

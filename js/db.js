@@ -279,7 +279,6 @@ export async function bulkSet(collPath, items, { merge = true } = {}) {
 
 /* ---------- live updates --------------------------------------------- */
 
-<<<<<<< HEAD
 export function watchDoc(path, cb, onError) {
   if (db.mode === 'cloud') {
     return fs.onSnapshot(
@@ -287,18 +286,12 @@ export function watchDoc(path, cb, onError) {
       (s) => cb(s.exists() ? { id: s.id, ...s.data() } : null),
       (err) => reportWatchError(path, err, onError)
     );
-=======
-export function watchDoc(path, cb) {
-  if (db.mode === 'cloud') {
-    return fs.onSnapshot(fs.doc(store, path), (s) => cb(s.exists() ? { id: s.id, ...s.data() } : null));
->>>>>>> c64610bbec40aad31db5dc28fe0276d69f793f4e
   }
   const run = () => { const v = local[path]; cb(v ? { id: lastSeg(path), ...v } : null); };
   listeners.add(run); run();
   return () => listeners.delete(run);
 }
 
-<<<<<<< HEAD
 export function watchList(collPath, cb, onError) {
   if (db.mode === 'cloud') {
     return fs.onSnapshot(
@@ -306,19 +299,12 @@ export function watchList(collPath, cb, onError) {
       (s) => cb(s.docs.map((d) => ({ id: d.id, ...d.data() }))),
       (err) => reportWatchError(collPath, err, onError)
     );
-=======
-export function watchList(collPath, cb) {
-  if (db.mode === 'cloud') {
-    return fs.onSnapshot(fs.collection(store, collPath), (s) =>
-      cb(s.docs.map((d) => ({ id: d.id, ...d.data() }))));
->>>>>>> c64610bbec40aad31db5dc28fe0276d69f793f4e
   }
   const run = () => cb(localChildren(collPath));
   listeners.add(run); run();
   return () => listeners.delete(run);
 }
 
-<<<<<<< HEAD
 /* A live read that fails just stops delivering, which looks exactly like
    "nobody has answered yet". Never let that happen quietly again. */
 function reportWatchError(path, err, onError) {
@@ -328,8 +314,6 @@ function reportWatchError(path, err, onError) {
   if (typeof onError === 'function') onError(info);
 }
 
-=======
->>>>>>> c64610bbec40aad31db5dc28fe0276d69f793f4e
 /* ---------- helpers --------------------------------------------------- */
 
 function lastSeg(path) { return path.split('/').pop(); }
