@@ -19,6 +19,7 @@ const state = {
   live: null,
   settings: { ...DEFAULT_SETTINGS },
   submittedRound: null,
+  seat: { ok: true },
   draft: { answer: null, confidence: null }
 };
 
@@ -96,7 +97,6 @@ async function renderJoin() {
     state.studentId = student.id;
     localStorage.setItem('quizarena:play:class', state.classId);
     localStorage.setItem('quizarena:play:student', state.studentId);
-    await claimSeat();
     await joinExisting();
   }
 
@@ -112,11 +112,24 @@ async function renderJoin() {
   await load();
 }
 
-async function claimSeat() {
+/**
+ * A student may only write an answer for a name whose seat they hold, so the
+ * seat has to exist before the first question, not just on the day they first
+ * picked their name. This runs on every join and is safe to repeat.
+ *
+ * @returns {Promise<{ok:boolean, reason?:string}>}
+ */
+async function ensureSeat() {
+  const path = `classes/${state.classId}/seats/${state.studentId}`;
   try {
-    await set(`classes/${state.classId}/seats/${state.studentId}`, { uid: db.uid, joinedAt: Date.now() });
-  } catch {
-    /* rules may block a second claim; the teacher can clear the seat */
+    const held = await get(path);
+    if (held && held.uid === db.uid) return { ok: true };
+    if (held && held.uid !== db.uid) return { ok: false, reason: 'taken' };
+    await set(path, { uid: db.uid, joinedAt: Date.now() });
+    return { ok: true };
+  } catch (err) {
+    console.error('Quiz Arena: seat claim failed', err);
+    return { ok: false, reason: err?.code === 'permission-denied' ? 'taken' : 'offline' };
   }
 }
 
@@ -130,6 +143,8 @@ async function joinExisting() {
   }
   state.settings = { ...DEFAULT_SETTINGS, ...(state.cls.settings || {}) };
   sfx.enabled = state.settings.sound !== false;
+
+  state.seat = await ensureSeat();
 
   $('#head').classList.remove('hidden');
   $('#me-name').textContent = state.student.name;
@@ -185,6 +200,11 @@ function renderLive() {
   if (!q) return appendLeave();
 
   const card = el('div', { class: 'qcard' });
+  if (!state.seat.ok) {
+    card.appendChild(el('div', { class: 'notice notice-bad', text: state.seat.reason === 'taken'
+      ? 'Another phone is signed in under your name, so your answers will not save. Ask your teacher to release it.'
+      : 'Not connected properly, so your answers may not save. Tell your teacher.' }));
+  }
   card.appendChild(questionMeta(q));
   card.appendChild(el('div', { class: 'qtext', text: q.text }));
   if (q.image) card.appendChild(el('img', { src: q.image, alt: '', style: 'max-width:100%;border-radius:8px;margin-bottom:16px' }));
@@ -258,20 +278,46 @@ async function submit(scored) {
   const path = scored
     ? `classes/${state.classId}/rounds/${live.roundId}/responses/${state.studentId}`
     : `classes/${state.classId}/rounds/${live.roundId}/shadow/${state.studentId}`;
+  const payload = {
+    answer: state.draft.answer,
+    confidence: state.draft.confidence ?? (state.settings.rule === 'calibration' ? 50 : 1),
+    name: state.student.name,
+    at: Date.now()
+  };
+
+  const write = () => set(path, payload);
+
   try {
-    await set(path, {
-      answer: state.draft.answer,
-      confidence: state.draft.confidence ?? (state.settings.rule === 'calibration' ? 50 : 1),
-      name: state.student.name,
-      at: Date.now()
-    });
-    state.submittedRound = live.roundId;
-    sfx.tick();
-    renderLive();
-  } catch (e) {
-    toast('That did not save. Tell your teacher.', 'bad');
-    console.error(e);
+    await write();
+  } catch (first) {
+    // Almost always a missing seat: this phone picked its name before the
+    // seat existed. Claim one and try the answer again before giving up.
+    if (first?.code !== 'permission-denied') {
+      toast('No connection. Your answer was not saved — try again.', 'bad');
+      console.error(first);
+      return;
+    }
+    const seat = await ensureSeat();
+    state.seat = seat;
+    if (!seat.ok) {
+      toast(seat.reason === 'taken'
+        ? 'Another phone is signed in as you. Ask your teacher to release your name.'
+        : 'Cannot reach the server. Your answer was not saved.', 'bad');
+      renderLive();
+      return;
+    }
+    try {
+      await write();
+    } catch (second) {
+      toast('Still could not save. Tell your teacher.', 'bad');
+      console.error(second);
+      return;
+    }
   }
+
+  state.submittedRound = live.roundId;
+  sfx.tick();
+  renderLive();
 }
 
 function waiting(title, sub) {

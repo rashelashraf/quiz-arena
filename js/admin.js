@@ -22,6 +22,7 @@ const state = {
   responses: [],
   results: [],
   prizes: [],
+  seats: [],
   section: 'run',
   filters: { topic: '', difficulty: '', type: '' },
   teacherEntry: {}          // studentId -> { answer, confidence } when typing for the class
@@ -185,6 +186,10 @@ async function selectClass(id) {
     state.live = doc;
     watchResponses();
     if (state.section === 'run') render();
+  }));
+  unsubs.push(watchList(`classes/${id}/seats`, (rows) => {
+    state.seats = rows;
+    if (state.section === 'students') render();
   }));
   unsubs.push(watchList(`classes/${id}/prizes`, (rows) => {
     state.prizes = rows;
@@ -755,6 +760,7 @@ function renderStudents() {
     el('h3', { text: `${state.students.length} students` }),
     el('div', { class: 'row' }, [
       el('button', { class: 'tiny', onclick: exportRoster, text: 'Download as CSV' }),
+      el('button', { class: 'tiny', onclick: releaseAll, text: 'Release all phones' }),
       el('button', { class: 'tiny btn-danger', onclick: resetScores, text: 'Reset all scores' })
     ])
   ]));
@@ -762,7 +768,7 @@ function renderStudents() {
   table.appendChild(el('thead', {}, el('tr', {}, [
     el('th', { text: 'Name' }), el('th', { text: 'Id' }), el('th', { text: 'Group' }),
     el('th', { class: 'num', text: 'Points' }), el('th', { class: 'num', text: 'Turns' }),
-    el('th', { text: 'In the draw' }), el('th', {})
+    el('th', { text: 'In the draw' }), el('th', { text: 'Phone' }), el('th', {})
   ])));
   const body = el('tbody');
   state.students.forEach((s) => {
@@ -777,6 +783,7 @@ function renderStudents() {
           onchange: (e) => set(`classes/${state.classId}/students/${s.id}`, { active: e.target.checked, resting: false }) }),
         el('span', { class: 'tiny', text: s.resting ? 'sitting out' : (s.active === false ? 'away' : 'yes') })
       ])),
+      el('td', {}, seatCell(s)),
       el('td', {}, el('button', { class: 'tiny btn-danger', onclick: () => removeStudent(s), text: 'Remove' }))
     ]));
   });
@@ -784,9 +791,31 @@ function renderStudents() {
   listBox.appendChild(table);
   root.appendChild(listBox);
 
+  /* A name is tied to the first phone that picks it, so nobody can answer as
+     someone else. When a student changes phone or clears their browser, the
+     old claim has to be let go before they can get back in. */
+  function seatCell(s) {
+    const seat = state.seats.find((x) => x.id === s.id);
+    if (!seat) return el('span', { class: 'tiny muted', text: 'not joined' });
+    return el('span', { class: 'row', style: 'gap:6px' }, [
+      el('span', { class: 'tag tag-jade', text: 'joined' }),
+      el('button', {
+        class: 'tiny btn-ghost',
+        title: 'Let this student sign in from a different phone',
+        onclick: async () => {
+          if (!confirm(`Release ${s.name}'s name? They can then join again from any phone.`)) return;
+          await del(`classes/${state.classId}/seats/${s.id}`);
+          toast(`${s.name} can join again.`);
+        },
+        text: 'Release'
+      })
+    ]);
+  }
+
   async function removeStudent(s) {
     if (!confirm(`Remove ${s.name} from ${state.cls.name}?`)) return;
     await del(`classes/${state.classId}/students/${s.id}`);
+    await del(`classes/${state.classId}/seats/${s.id}`);
   }
   function exportRoster() {
     download(`${state.classId}-class-list.csv`, toCsv(state.students, [
@@ -794,6 +823,12 @@ function renderStudents() {
       { label: 'points', key: 'score' }, { label: 'turns', key: 'turns' }, { label: 'correct', key: 'correct' }
     ]), 'text/csv');
   }
+  async function releaseAll() {
+    if (!confirm('Release every name? Students will each pick their name again on their phone.')) return;
+    await delCollection(`classes/${state.classId}/seats`);
+    toast('All names released.');
+  }
+
   async function resetScores() {
     if (!confirm('Set every score, turn count and streak back to zero?')) return;
     for (const s of state.students) {

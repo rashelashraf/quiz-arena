@@ -74,6 +74,12 @@ who they are, so they only do it once.
 While two students are on the spot, everyone else can answer along on their own
 phone for practice. Those answers are stored separately and never scored.
 
+A name belongs to the first phone that picks it, so nobody can answer as
+someone else. If a student changes phone or clears their browser, press
+**Release** beside their name on the class list page and they can pick it
+again. **Release all phones** does the whole class, which is the quickest fix
+if something has gone odd.
+
 The web config keys are meant to be public. The rules are what protect the data,
 which is why step 5 matters more than it looks.
 
@@ -91,6 +97,8 @@ first thing that is wrong, with the fix. The usual culprits:
 | `unavailable` | No Firestore database yet. Firestore Database → Create database → **Native** mode |
 | `not-found` | The database has a name other than `(default)`. Put that name in `FIRESTORE_DATABASE_ID` in `js/config.js` |
 | Console asks you to sign in | Expected. Use the teacher account from step 6 |
+| A student sees "another phone is signed in as you" | They changed phone or cleared their browser. Class list page, **Release** next to their name |
+| Answers not saving for anyone | Class list page, **Release all phones**, then have them pick their names again |
 | Signs in, still refused | That account's UID is not in `admins`. The sign-in screen shows the UID to copy |
 
 That last one is the one that catches people, because it looks exactly like a
