@@ -1,0 +1,111 @@
+rules_version = '2';
+
+// Copy this into Firebase console -> Firestore -> Rules, then publish.
+//
+// The shape it enforces:
+//   * anyone signed in (students sign in anonymously) can read the class,
+//     the roster, the questions and the live round
+//   * only a teacher can write any of that
+//   * nobody but a teacher can read the `keys` collection, which is where
+//     the correct answers live. The question documents students read do not
+//     contain answers at all, so opening the browser console gets them nothing
+//   * a student may write exactly one response document, under their own id,
+//     and only if they hold the seat for that id
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    // A teacher is anyone with a document in `admins` named after their UID.
+    // Firebase console: Authentication, Users shows each account's UID.
+    // Copy it, then Firestore, admins, Add document, paste it as the
+    // document ID. The fields inside are ignored.
+    function isTeacher() {
+      return signedIn() && exists(/databases/$(database)/documents/admins/$(request.auth.uid));
+    }
+
+    function holdsSeat(classId, studentId) {
+      return signedIn()
+        && exists(/databases/$(database)/documents/classes/$(classId)/seats/$(studentId))
+        && get(/databases/$(database)/documents/classes/$(classId)/seats/$(studentId)).data.uid == request.auth.uid;
+    }
+
+    // The teacher list. Read-only from the app: the only way to become a
+    // teacher is for someone with Firebase console access to add a document
+    // here whose ID is the account's UID. Nothing the app can do grants it.
+    match /admins/{uid} {
+      allow read: if signedIn();
+      allow write: if false;
+    }
+
+    match /classes/{classId} {
+      allow read: if signedIn();
+      allow write: if isTeacher();
+
+      match /students/{studentId} {
+        allow read: if signedIn();
+        allow write: if isTeacher();
+      }
+
+      match /questions/{questionId} {
+        allow read: if signedIn();
+        allow write: if isTeacher();
+      }
+
+      // The answers. Teachers only, read and write.
+      match /keys/{questionId} {
+        allow read, write: if isTeacher();
+      }
+
+      match /live/{docId} {
+        allow read: if signedIn();
+        allow write: if isTeacher();
+      }
+
+      match /results/{resultId} {
+        allow read: if signedIn();
+        allow write: if isTeacher();
+      }
+
+      match /prizes/{prizeId} {
+        allow read: if signedIn();
+        allow write: if isTeacher();
+      }
+
+      // A phone claims a seat once. After that only that phone, or a teacher,
+      // can change it.
+      match /seats/{studentId} {
+        allow read: if signedIn();
+        allow create: if signedIn() && request.resource.data.uid == request.auth.uid;
+        allow update, delete: if isTeacher() || resource.data.uid == request.auth.uid;
+      }
+
+      match /rounds/{roundId} {
+        allow read: if signedIn();
+        allow write: if isTeacher();
+
+        // Scored answers. Only a teacher reads these, and reading is kept as
+        // its own statement: a query over the whole collection cannot bind
+        // {studentId}, so a rule that mixed `isTeacher()` with a per-student
+        // seat check made the teacher's live read unreliable. Students do not
+        // need to read answers at all — their result arrives in the live
+        // round document.
+        match /responses/{studentId} {
+          allow read: if isTeacher();
+          allow create, update: if holdsSeat(classId, studentId) || isTeacher();
+          allow delete: if isTeacher();
+        }
+
+        // Practice answers from students who were not drawn. Same rule.
+        match /shadow/{studentId} {
+          allow read: if isTeacher();
+          allow create, update: if holdsSeat(classId, studentId) || isTeacher();
+          allow delete: if isTeacher();
+        }
+      }
+    }
+  }
+}

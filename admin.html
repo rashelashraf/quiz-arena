@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Teacher console — Quiz Arena</title>
+<link rel="stylesheet" href="css/app.css">
+</head>
+<body>
+<div id="gate" class="hidden" style="max-width:460px;margin:0 auto;padding:10vh 24px">
+  <h1 style="font-size:2rem">Teacher sign-in</h1>
+  <p class="muted" id="gate-why">The console is only open to teacher accounts.</p>
+  <div class="panel" style="margin-top:20px">
+    <div class="field"><label for="g-email">Email</label><input type="text" id="g-email" autocomplete="username"></div>
+    <div class="field"><label for="g-pw">Password</label><input type="password" id="g-pw" autocomplete="current-password"></div>
+    <button id="g-signin" class="btn-primary btn-big" style="width:100%;justify-content:center">Sign in</button>
+    <div id="g-note" class="tiny muted" style="margin-top:14px"></div>
+  </div>
+  <p class="tiny" style="margin-top:18px">
+    <a href="index.html">Back to the start</a> · <a href="diagnose.html">Connection check</a>
+  </p>
+</div>
+
+<div class="shell" id="shell">
+  <nav class="rail" aria-label="Sections">
+    <a class="brand" href="index.html" style="text-decoration:none">Quiz&nbsp;<span>Arena</span></a>
+    <button data-go="run" aria-current="page">Run the quiz</button>
+    <button data-go="students">Class list</button>
+    <button data-go="questions">Questions</button>
+    <button data-go="awards">Prizes</button>
+    <button data-go="reports">Results</button>
+    <button data-go="settings">Settings</button>
+    <div class="rail-foot">
+      <div id="mode-note">…</div>
+      <a href="board.html" target="_blank" rel="noopener">Open big screen</a>
+    </div>
+  </nav>
+
+  <main class="main">
+    <div class="topbar">
+      <select id="class-picker" aria-label="Class"></select>
+      <button id="new-class">New class</button>
+      <span class="grow"></span>
+      <span id="pool-note" class="tiny muted"></span>
+    </div>
+
+    <div id="no-class" class="empty hidden">
+      <h3>Start with a class</h3>
+      <p>Make a class, paste in the students, then paste in the questions. Two minutes, once per class.</p>
+      <button class="btn-primary" id="first-class">Create a class</button>
+    </div>
+
+    <section id="sec-run" class="sec"></section>
+    <section id="sec-students" class="sec hidden"></section>
+    <section id="sec-questions" class="sec hidden"></section>
+    <section id="sec-awards" class="sec hidden"></section>
+    <section id="sec-reports" class="sec hidden"></section>
+    <section id="sec-settings" class="sec hidden"></section>
+  </main>
+</div>
+
+<script type="module" src="js/admin.js"></script>
+</body>
+</html>

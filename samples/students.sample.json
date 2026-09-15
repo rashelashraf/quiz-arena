@@ -1,0 +1,9 @@
+{
+  "class": "Year 9 Science",
+  "students": [
+    { "id": "9A-01", "name": "Aisha Rahman", "group": "Blue" },
+    { "id": "9A-02", "name": "Tenzin Dorji", "group": "Gold" },
+    { "id": "9A-03", "name": "Marcus Oyelaran", "group": "Blue" },
+    { "id": "9A-04", "name": "Priya Nair", "group": "Gold" }
+  ]
+}

@@ -1,0 +1,161 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Quiz Arena</title>
+<link rel="stylesheet" href="css/app.css">
+</head>
+<body>
+<main class="home">
+  <h1 class="home-title">Quiz <span>Arena</span></h1>
+  <p class="home-lede">
+    A live quiz for one class at a time. Two students are drawn, both answer the same
+    question, and both say how sure they are before the answer is shown.
+  </p>
+
+  <nav class="doors">
+    <a class="door" href="admin.html">
+      <span class="mark">1</span>
+      <h3>Teacher console</h3>
+      <p>Set up classes, import questions and students, run the round, award the prizes.</p>
+    </a>
+    <a class="door" href="board.html">
+      <span class="mark">2</span>
+      <h3>Big screen</h3>
+      <p>Open this on the projector. It shows the draw, the question and the scoreboard.</p>
+    </a>
+    <a class="door" href="play.html">
+      <span class="mark">3</span>
+      <h3>Student</h3>
+      <p>Students open this on a phone or tablet and answer when their name comes up.</p>
+    </a>
+  </nav>
+
+  <div class="panel" style="margin-top:34px">
+    <div class="panel-head"><h3>Connection</h3></div>
+    <p id="status" class="muted">Checking…</p>
+    <div id="uid-box" class="hidden">
+      <p class="tiny muted" style="margin-bottom:6px">
+        This account's ID. A teacher account only works once someone with
+        Firebase console access has added this ID as a document in the
+        <code>admins</code> collection.
+      </p>
+      <div class="row wrap">
+        <input type="text" id="uid" readonly style="font-family:ui-monospace,monospace;max-width:340px">
+        <button id="copy">Copy</button>
+        <button id="recheck">Check again</button>
+      </div>
+    </div>
+    <div id="signin-box" class="hidden" style="margin-top:18px;padding-top:16px;border-top:1px solid var(--line)">
+      <h3 style="margin-bottom:4px">Teacher sign-in</h3>
+      <p class="tiny muted">
+        The console is only open to accounts on the teacher list, which is
+        managed from the Firebase console. Students never sign in — they pick
+        their name and play. The same teacher account works on your laptop,
+        the projector and any other machine.
+      </p>
+      <div class="field-row" style="margin-top:10px">
+        <div><label for="email">Email</label><input type="text" id="email" autocomplete="username"></div>
+        <div><label for="pw">Password</label><input type="password" id="pw" autocomplete="current-password"></div>
+      </div>
+      <button id="signin" class="btn-primary">Sign in as teacher</button>
+    </div>
+
+    <div id="who-box" class="hidden" style="margin-top:14px">
+      <span class="tag tag-violet" id="who"></span>
+      <button id="signout" class="btn-ghost tiny">Sign out</button>
+    </div>
+
+    <p class="tiny" style="margin-top:14px">
+      Something not working? <a href="diagnose.html">Run the connection check</a>.
+    </p>
+  </div>
+
+  <p class="tiny muted" style="margin-top:26px">
+    Everything here runs in the browser. Read <a href="README.md">README.md</a> for the
+    setup steps and the import formats.
+  </p>
+</main>
+
+<script type="module">
+import { initDb, db, hasCloudConfig, refreshRole, signInTeacher, signOutTeacher } from './js/db.js';
+import { $, toast } from './js/render.js';
+
+const status = $('#status');
+await initDb();
+
+const problem = (text) => `${text}<br><span class="tiny">Details: <code>${db.lastError.code}</code> while ${db.lastError.stage}.` +
+  (db.lastError.hint ? ` ${db.lastError.hint}` : '') +
+  ` <a href="diagnose.html">Run the connection check</a>.</span>`;
+
+if (db.mode === 'cloud' && db.isAdmin) {
+  status.textContent = 'Connected to Firebase and signed in as a teacher. Students on other devices will see the same quiz.';
+} else if (db.mode === 'cloud' && db.lastError) {
+  status.innerHTML = problem('Signed in to Firebase, but the database would not answer, so nothing will save.');
+  showUid();
+} else if (db.mode === 'cloud') {
+  status.innerHTML = db.isAnonymous
+    ? 'Connected to Firebase. Students can play from here. Sign in below to run a quiz.'
+    : 'Signed in, but this account is not on the teacher list, so the console stays locked.';
+  if (!db.isAnonymous) showUid();
+} else if (hasCloudConfig()) {
+  status.innerHTML = problem('Firebase is set up in js/config.js but did not start, so this device is working on its own.');
+} else {
+  status.innerHTML = 'Running on this device only. Nothing is shared with student phones yet — paste your Firebase settings into <code>js/config.js</code> to turn that on. Everything else works as normal.';
+}
+
+function showUid() {
+  $('#uid-box').classList.remove('hidden');
+  $('#uid').value = db.uid || '';
+}
+
+if (db.mode === 'cloud') {
+  if (db.isAnonymous) {
+    $('#signin-box').classList.remove('hidden');
+  } else {
+    $('#who-box').classList.remove('hidden');
+    $('#who').textContent = `Signed in as ${db.email}`;
+  }
+}
+
+$('#signin')?.addEventListener('click', async (e) => {
+  const email = $('#email').value.trim();
+  const pw = $('#pw').value;
+  if (!email || !pw) { toast('Enter the email and password.', 'warn'); return; }
+  e.target.disabled = true;
+  try {
+    await signInTeacher(email, pw);
+    toast(db.isAdmin ? 'Signed in as a teacher.' : 'Signed in. Now claim teacher access.');
+    setTimeout(() => location.reload(), 900);
+  } catch (err) {
+    e.target.disabled = false;
+    const said = {
+      'auth/invalid-credential': 'That email and password do not match an account on this project.',
+      'auth/wrong-password': 'Wrong password.',
+      'auth/user-not-found': 'No account with that email. Create one in the Firebase console under Authentication, Users.',
+      'auth/invalid-email': 'That does not look like an email address.',
+      'auth/operation-not-allowed': 'Email sign-in is switched off. Firebase console, Authentication, Sign-in method, Email/Password, Enable.'
+    }[err?.code];
+    toast(said || err?.message || 'Could not sign in', 'bad');
+  }
+});
+
+$('#signout')?.addEventListener('click', async () => {
+  await signOutTeacher();
+  location.reload();
+});
+
+$('#copy')?.addEventListener('click', async () => {
+  await navigator.clipboard.writeText(db.uid);
+  toast('Copied');
+});
+
+$('#recheck')?.addEventListener('click', async () => {
+  const ok = await refreshRole();
+  toast(ok ? 'You are a teacher now' : 'Still not listed as a teacher', ok ? 'ok' : 'warn');
+  if (ok) location.reload();
+});
+</script>
+</body>
+</html>

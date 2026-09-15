@@ -1,0 +1,86 @@
+{
+  "class": "Year 9 Science",
+  "note": "Every question type is shown once. Difficulty may be 1-5 or the words warm-up, easy, medium, hard, stretch. Answers may be given as an index, a letter, or the option text itself.",
+  "questions": [
+    {
+      "id": "sci-tf-01",
+      "type": "true_false",
+      "topic": "Astronomy",
+      "difficulty": "easy",
+      "text": "The Moon produces its own light.",
+      "answer": false,
+      "explanation": "We see the Moon because it reflects sunlight. It gives off no visible light of its own."
+    },
+    {
+      "id": "sci-mcq-01",
+      "type": "mcq_single",
+      "topic": "Chemistry",
+      "difficulty": 2,
+      "text": "Which gas do plants take in during photosynthesis?",
+      "options": ["Oxygen", "Nitrogen", "Carbon dioxide", "Hydrogen"],
+      "answer": "Carbon dioxide",
+      "explanation": "Carbon dioxide and water go in, glucose and oxygen come out."
+    },
+    {
+      "id": "sci-mcq-02",
+      "type": "mcq_single",
+      "topic": "Physics",
+      "difficulty": "hard",
+      "text": "A ball is thrown straight up. At the highest point of its flight, what is true of its acceleration?",
+      "options": [
+        "It is zero, because the ball has stopped",
+        "It points downward at about 9.8 m/s²",
+        "It points upward at about 9.8 m/s²",
+        "It reverses direction at that instant"
+      ],
+      "answer": "B",
+      "explanation": "Velocity is zero for an instant, but gravity never stops pulling, so acceleration stays downward the whole way.",
+      "timeLimitSec": 60
+    },
+    {
+      "type": "mcq_multi",
+      "topic": "Biology",
+      "difficulty": 3,
+      "text": "Which of these are mammals?",
+      "options": ["Dolphin", "Shark", "Bat", "Penguin", "Platypus"],
+      "answer": ["Dolphin", "Bat", "Platypus"],
+      "explanation": "Dolphins and bats are mammals despite swimming and flying. The platypus lays eggs and is still a mammal.",
+      "partialCredit": true
+    },
+    {
+      "type": "matching",
+      "topic": "Chemistry",
+      "difficulty": 3,
+      "text": "Match each element symbol to its name.",
+      "left": ["Na", "K", "Fe", "Au"],
+      "right": ["Iron", "Gold", "Sodium", "Potassium"],
+      "answer": ["Sodium", "Potassium", "Iron", "Gold"],
+      "explanation": "Several symbols come from Latin: natrium, kalium, ferrum, aurum."
+    },
+    {
+      "type": "ordering",
+      "topic": "Biology",
+      "difficulty": 4,
+      "text": "Put these stages of the water cycle in order, starting from the ocean.",
+      "items": ["Precipitation", "Evaporation", "Collection", "Condensation"],
+      "answer": ["Evaporation", "Condensation", "Precipitation", "Collection"]
+    },
+    {
+      "type": "short_answer",
+      "topic": "Astronomy",
+      "difficulty": "stretch",
+      "text": "What name is given to a star that suddenly brightens by a huge amount as it collapses at the end of its life?",
+      "answer": ["supernova", "super nova"],
+      "caseSensitive": false,
+      "explanation": "A supernova can briefly outshine its whole galaxy."
+    },
+    {
+      "type": "true_false",
+      "topic": "Physics",
+      "difficulty": "stretch",
+      "text": "Sound travels faster through steel than through air.",
+      "answer": true,
+      "explanation": "About fifteen times faster. Tighter-packed particles pass the vibration along more quickly."
+    }
+  ]
+}
