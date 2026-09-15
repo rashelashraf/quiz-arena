@@ -48,6 +48,27 @@
         <button id="recheck">Check again</button>
       </div>
     </div>
+    <div id="signin-box" class="hidden" style="margin-top:18px;padding-top:16px;border-top:1px solid var(--line)">
+      <h3 style="margin-bottom:4px">Teaching from more than one machine?</h3>
+      <p class="tiny muted">
+        Anonymous sign-in gives each browser its own ID, so a laptop, the
+        projector and a staffroom machine would each count as a different
+        person. Sign in with a teacher account instead and the same identity
+        follows you everywhere. Create the account once in the Firebase
+        console under Authentication, Users, Add user.
+      </p>
+      <div class="field-row" style="margin-top:10px">
+        <div><label for="email">Email</label><input type="text" id="email" autocomplete="username"></div>
+        <div><label for="pw">Password</label><input type="password" id="pw" autocomplete="current-password"></div>
+      </div>
+      <button id="signin" class="btn-primary">Sign in as teacher</button>
+    </div>
+
+    <div id="who-box" class="hidden" style="margin-top:14px">
+      <span class="tag tag-violet" id="who"></span>
+      <button id="signout" class="btn-ghost tiny">Sign out</button>
+    </div>
+
     <div id="lock-box" class="hidden" style="margin-top:14px">
       <div class="notice notice-warn">
         The teacher list is still open, so anyone opening this link could make
@@ -67,7 +88,7 @@
 </main>
 
 <script type="module">
-import { initDb, db, hasCloudConfig, refreshRole, claimAdmin, adminsLocked, lockAdmins } from './js/db.js';
+import { initDb, db, hasCloudConfig, refreshRole, claimAdmin, adminsLocked, lockAdmins, signInTeacher, signOutTeacher } from './js/db.js';
 import { $, toast } from './js/render.js';
 
 const status = $('#status');
@@ -85,9 +106,12 @@ if (db.mode === 'cloud' && db.isAdmin) {
 } else if (db.mode === 'cloud') {
   status.innerHTML = 'Connected to Firebase, but this device is not a teacher yet, so the console cannot save anything.';
   showUid();
-  try {
-    if (!(await adminsLocked())) $('#claim').classList.remove('hidden');
-  } catch { /* the check itself may be blocked; the button stays hidden */ }
+  // Show the claim button unless the list is known to be closed. If the check
+  // itself is refused, the published rules are the old ones, and pressing the
+  // button says so clearly — better than a button that quietly hides.
+  let closed = false;
+  try { closed = await adminsLocked(); } catch { closed = false; }
+  if (!closed) $('#claim').classList.remove('hidden');
 } else if (hasCloudConfig()) {
   status.innerHTML = problem('Firebase is set up in js/config.js but did not start, so this device is working on its own.');
 } else {
@@ -103,6 +127,42 @@ function showUid() {
   $('#uid').value = db.uid || '';
 }
 
+if (db.mode === 'cloud') {
+  if (db.isAnonymous) {
+    $('#signin-box').classList.remove('hidden');
+  } else {
+    $('#who-box').classList.remove('hidden');
+    $('#who').textContent = `Signed in as ${db.email}`;
+  }
+}
+
+$('#signin')?.addEventListener('click', async (e) => {
+  const email = $('#email').value.trim();
+  const pw = $('#pw').value;
+  if (!email || !pw) { toast('Enter the email and password.', 'warn'); return; }
+  e.target.disabled = true;
+  try {
+    await signInTeacher(email, pw);
+    toast(db.isAdmin ? 'Signed in as a teacher.' : 'Signed in. Now claim teacher access.');
+    setTimeout(() => location.reload(), 900);
+  } catch (err) {
+    e.target.disabled = false;
+    const said = {
+      'auth/invalid-credential': 'That email and password do not match an account on this project.',
+      'auth/wrong-password': 'Wrong password.',
+      'auth/user-not-found': 'No account with that email. Create one in the Firebase console under Authentication, Users.',
+      'auth/invalid-email': 'That does not look like an email address.',
+      'auth/operation-not-allowed': 'Email sign-in is switched off. Firebase console, Authentication, Sign-in method, Email/Password, Enable.'
+    }[err?.code];
+    toast(said || err?.message || 'Could not sign in', 'bad');
+  }
+});
+
+$('#signout')?.addEventListener('click', async () => {
+  await signOutTeacher();
+  location.reload();
+});
+
 $('#copy')?.addEventListener('click', async () => {
   await navigator.clipboard.writeText(db.uid);
   toast('Copied');
@@ -117,7 +177,7 @@ $('#claim')?.addEventListener('click', async (e) => {
   } catch (err) {
     e.target.disabled = false;
     toast(err?.code === 'permission-denied'
-      ? 'Refused. Either the rules are the old ones, or the teacher list is already closed.'
+      ? 'Refused. Publish the latest firestore.rules from this repo, then try again. If the teacher list is already closed, add the ID above in the Firebase console instead.'
       : (err?.message || 'That did not work'), 'bad');
   }
 });

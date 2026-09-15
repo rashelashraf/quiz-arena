@@ -58,7 +58,9 @@ if (db.mode === 'cloud' && db.lastError) {
 }
 
 $('#mode-note').textContent = db.mode === 'cloud'
-  ? (db.isAdmin ? 'Firebase, signed in as teacher' : 'Firebase, read-only')
+  ? (db.isAdmin
+      ? `Teacher${db.email ? ': ' + db.email : ' on this device'}`
+      : 'Signed in, but not a teacher')
   : 'This device only';
 
 if (db.mode === 'cloud' && !db.isAdmin) {

@@ -22,6 +22,9 @@ export const db = {
   uid: null,
   isAdmin: false,
   ready: false,
+  /** Set when signed in with an email account rather than anonymously. */
+  email: null,
+  isAnonymous: true,
   /** Set when the cloud start fails, so the interface can say what went wrong
       instead of quietly pretending nothing happened. */
   lastError: null
@@ -50,6 +53,8 @@ export function explain(err) {
 
 let fs = null;          // firestore module namespace
 let store = null;       // firestore instance
+let authMod = null;     // auth module namespace
+let authInst = null;    // auth instance
 let local = null;       // { [path]: data }
 const listeners = new Set();
 let channel = null;
@@ -80,9 +85,20 @@ export async function initDb({ preferLocal = false } = {}) {
         : firestore.getFirestore(app);
 
       stage = 'signing in';
-      const a = auth.getAuth(app);
-      const cred = await auth.signInAnonymously(a);
-      db.uid = cred.user.uid;
+      authMod = auth;
+      authInst = auth.getAuth(app);
+
+      // A teacher who signed in with an email address last time is still
+      // signed in, so restore that session rather than replacing it with a
+      // fresh anonymous one.
+      const existing = await new Promise((resolve) => {
+        const stop = auth.onAuthStateChanged(authInst, (u) => { stop(); resolve(u); });
+      });
+      const user = existing || (await auth.signInAnonymously(authInst)).user;
+
+      db.uid = user.uid;
+      db.email = user.email || null;
+      db.isAnonymous = user.isAnonymous !== false;
       db.mode = 'cloud';
       db.ready = true;
 
@@ -143,6 +159,27 @@ export async function claimAdmin() {
   });
   db.isAdmin = true;
   return true;
+}
+
+/**
+ * Signs in with an email account. Anonymous IDs are tied to one browser, so a
+ * teacher who moves between a laptop, a staffroom machine and the projector
+ * needs an account instead: the same ID follows them everywhere.
+ */
+export async function signInTeacher(email, password) {
+  if (db.mode !== 'cloud') throw new Error('Not connected to Firebase.');
+  const cred = await authMod.signInWithEmailAndPassword(authInst, email.trim(), password);
+  db.uid = cred.user.uid;
+  db.email = cred.user.email;
+  db.isAnonymous = false;
+  db.isAdmin = await checkAdmin(db.uid);
+  return db;
+}
+
+/** Drops back to an anonymous session. */
+export async function signOutTeacher() {
+  if (db.mode !== 'cloud') return;
+  await authMod.signOut(authInst);
 }
 
 /** True once the teacher list has been closed to new claims. */

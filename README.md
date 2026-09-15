@@ -40,19 +40,32 @@ a different machine from your laptop.
    the rules below replace the defaults.
 3. **Build → Authentication → Sign-in method → Anonymous → Enable.** Students
    never make accounts; each phone is signed in silently.
+   Enable **Email/Password** on the same screen as well — that is what you sign
+   in with as the teacher.
 4. **Project settings → Your apps → Web app.** Copy the config object and paste
    it into `js/config.js`.
 5. **Firestore → Rules.** Replace everything with the contents of
    `firestore.rules`, then publish.
-6. Open `diagnose.html` on the site and press **Claim teacher access**. That
-   makes the device you are on a teacher.
-7. Press **Close the teacher list**. Until you do, anyone who opens the link
-   could claim teacher access too. Do this before you hand the link to a class.
+6. **Authentication → Users → Add user.** Make one account for yourself with
+   an email and a password. This is your teacher login.
+7. Open the site, and on the home page sign in with that email and password.
+8. Press **Claim teacher access**, then **Close the teacher list**. Until you
+   close it, anyone opening the link could claim teacher access too, so do this
+   before you hand the link to a class.
 
-To add another teaching device after locking, open the Firebase console and add
-a document to the `admins` collection whose **document ID** is that device's
-user ID. The ID is what matters; the fields inside are ignored. Each device
-shows its own ID on the home page.
+### Teaching from more than one machine
+
+Sign in with the teacher account from step 6. Anonymous sign-in gives every
+browser a separate identity, so your laptop, the projector and a staffroom
+machine would each count as a different person and each would need its own
+entry in the `admins` collection. An email account is one identity that works
+on all of them, and survives clearing the browser.
+
+You only claim teacher access once, for the account. After that, signing in on
+any machine is enough.
+
+For a colleague, make them a second account in the console and add its **user
+UID** — shown in the Users list — as a document ID in the `admins` collection.
 
 The web config keys are meant to be public. The rules are what protect the data,
 which is why step 5 matters more than it looks.
@@ -70,7 +83,9 @@ first thing that is wrong, with the fix. The usual culprits:
 | `permission-denied` | The rules are still the default locked-mode set. Paste `firestore.rules` in and press Publish |
 | `unavailable` | No Firestore database yet. Firestore Database → Create database → **Native** mode |
 | `not-found` | The database has a name other than `(default)`. Put that name in `FIRESTORE_DATABASE_ID` in `js/config.js` |
-| Connects, but nothing saves | Signed in fine, but this device is not a teacher. Claim it, see step 6 above |
+| Connects, but nothing saves | Signed in fine, but this device is not a teacher. Sign in with the teacher account and claim access |
+| **Claim teacher access** is refused | The rules published in Firebase are older than `firestore.rules` in this repo. Paste them in again and press Publish |
+| Teacher on one machine, not another | You are signed in anonymously. Use the email account instead; see above |
 
 That last one is the one that catches people, because it looks exactly like a
 connection failure: everything loads, and then creating a class quietly does

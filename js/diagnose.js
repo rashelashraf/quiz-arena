@@ -164,12 +164,16 @@ if (canRead) {
     } else {
       const snap = await firestore.getDoc(firestore.doc(store, 'admins', uid));
       isTeacher = snap.exists();
-      locked = (await firestore.getDoc(firestore.doc(store, 'meta', 'lock'))).exists();
+      // If this read is refused, the published rules predate the meta
+      // collection. Treat the list as open so the claim button still appears.
+      try {
+        locked = (await firestore.getDoc(firestore.doc(store, 'meta', 'lock'))).exists();
+      } catch { locked = false; }
       if (isTeacher) who.pass('Yes. This device can create classes and run quizzes.');
       else if (locked) who.fail('No, and the teacher list is closed.',
         `Add a document to the <code>admins</code> collection whose <b>document ID</b> is <code>${uid}</code>. The ID is what matters, not the fields inside.`);
       else who.warn('Not yet, but the teacher list is still open.',
-        'Press <b>Claim teacher access</b> below. Then lock the list so nobody else can.');
+        'Press <b>Claim teacher access</b> below, then close the list. If the claim is refused, the rules published in Firebase are older than the ones in <code>firestore.rules</code> — paste them in again and press Publish. To teach from several machines, sign in with a teacher account on the home page first.');
     }
   } catch (e) {
     who.fail(errText(e), 'Reads worked elsewhere, so this is probably a rules mismatch. Re-publish <code>firestore.rules</code>.');
