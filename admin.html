@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Teacher console — Quiz Arena</title>
+<link rel="stylesheet" href="css/app.css">
+</head>
+<body>
+<div class="shell">
+  <nav class="rail" aria-label="Sections">
+    <a class="brand" href="index.html" style="text-decoration:none">Quiz&nbsp;<span>Arena</span></a>
+    <button data-go="run" aria-current="page">Run the quiz</button>
+    <button data-go="students">Class list</button>
+    <button data-go="questions">Questions</button>
+    <button data-go="awards">Prizes</button>
+    <button data-go="reports">Results</button>
+    <button data-go="settings">Settings</button>
+    <div class="rail-foot">
+      <div id="mode-note">…</div>
+      <a href="board.html" target="_blank" rel="noopener">Open big screen</a>
+    </div>
+  </nav>
+
+  <main class="main">
+    <div class="topbar">
+      <select id="class-picker" aria-label="Class"></select>
+      <button id="new-class">New class</button>
+      <span class="grow"></span>
+      <span id="pool-note" class="tiny muted"></span>
+    </div>
+
+    <div id="no-class" class="empty hidden">
+      <h3>Start with a class</h3>
+      <p>Make a class, paste in the students, then paste in the questions. Two minutes, once per class.</p>
+      <button class="btn-primary" id="first-class">Create a class</button>
+    </div>
+
+    <section id="sec-run" class="sec"></section>
+    <section id="sec-students" class="sec hidden"></section>
+    <section id="sec-questions" class="sec hidden"></section>
+    <section id="sec-awards" class="sec hidden"></section>
+    <section id="sec-reports" class="sec hidden"></section>
+    <section id="sec-settings" class="sec hidden"></section>
+  </main>
+</div>
+
+<script type="module" src="js/admin.js"></script>
+</body>
+</html>

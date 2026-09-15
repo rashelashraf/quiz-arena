@@ -1,0 +1,139 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Quiz Arena</title>
+<link rel="stylesheet" href="css/app.css">
+</head>
+<body>
+<main class="home">
+  <h1 class="home-title">Quiz <span>Arena</span></h1>
+  <p class="home-lede">
+    A live quiz for one class at a time. Two students are drawn, both answer the same
+    question, and both say how sure they are before the answer is shown.
+  </p>
+
+  <nav class="doors">
+    <a class="door" href="admin.html">
+      <span class="mark">1</span>
+      <h3>Teacher console</h3>
+      <p>Set up classes, import questions and students, run the round, award the prizes.</p>
+    </a>
+    <a class="door" href="board.html">
+      <span class="mark">2</span>
+      <h3>Big screen</h3>
+      <p>Open this on the projector. It shows the draw, the question and the scoreboard.</p>
+    </a>
+    <a class="door" href="play.html">
+      <span class="mark">3</span>
+      <h3>Student</h3>
+      <p>Students open this on a phone or tablet and answer when their name comes up.</p>
+    </a>
+  </nav>
+
+  <div class="panel" style="margin-top:34px">
+    <div class="panel-head"><h3>Connection</h3></div>
+    <p id="status" class="muted">Checking…</p>
+    <div id="uid-box" class="hidden">
+      <p class="tiny muted" style="margin-bottom:6px">
+        This device's ID. To make it a teacher by hand, add a document to the
+        <code>admins</code> collection in the Firebase console whose
+        <b>document ID</b> is this value.
+      </p>
+      <div class="row wrap">
+        <input type="text" id="uid" readonly style="font-family:ui-monospace,monospace;max-width:340px">
+        <button id="copy">Copy</button>
+        <button id="claim" class="btn-primary hidden">Claim teacher access</button>
+        <button id="recheck">Check again</button>
+      </div>
+    </div>
+    <div id="lock-box" class="hidden" style="margin-top:14px">
+      <div class="notice notice-warn">
+        The teacher list is still open, so anyone opening this link could make
+        themselves a teacher. Close it before you hand the link to a class.
+      </div>
+      <button id="lock">Close the teacher list</button>
+    </div>
+    <p class="tiny" style="margin-top:14px">
+      Something not working? <a href="diagnose.html">Run the connection check</a>.
+    </p>
+  </div>
+
+  <p class="tiny muted" style="margin-top:26px">
+    Everything here runs in the browser. Read <a href="README.md">README.md</a> for the
+    setup steps and the import formats.
+  </p>
+</main>
+
+<script type="module">
+import { initDb, db, hasCloudConfig, refreshRole, claimAdmin, adminsLocked, lockAdmins } from './js/db.js';
+import { $, toast } from './js/render.js';
+
+const status = $('#status');
+await initDb();
+
+const problem = (text) => `${text}<br><span class="tiny">Details: <code>${db.lastError.code}</code> while ${db.lastError.stage}.` +
+  (db.lastError.hint ? ` ${db.lastError.hint}` : '') +
+  ` <a href="diagnose.html">Run the connection check</a>.</span>`;
+
+if (db.mode === 'cloud' && db.isAdmin) {
+  status.textContent = 'Connected to Firebase and signed in as a teacher. Students on other devices will see the same quiz.';
+} else if (db.mode === 'cloud' && db.lastError) {
+  status.innerHTML = problem('Signed in to Firebase, but the database would not answer, so nothing will save.');
+  showUid();
+} else if (db.mode === 'cloud') {
+  status.innerHTML = 'Connected to Firebase, but this device is not a teacher yet, so the console cannot save anything.';
+  showUid();
+  try {
+    if (!(await adminsLocked())) $('#claim').classList.remove('hidden');
+  } catch { /* the check itself may be blocked; the button stays hidden */ }
+} else if (hasCloudConfig()) {
+  status.innerHTML = problem('Firebase is set up in js/config.js but did not start, so this device is working on its own.');
+} else {
+  status.innerHTML = 'Running on this device only. Nothing is shared with student phones yet — paste your Firebase settings into <code>js/config.js</code> to turn that on. Everything else works as normal.';
+}
+
+if (db.mode === 'cloud' && db.isAdmin) {
+  try { if (!(await adminsLocked())) $('#lock-box').classList.remove('hidden'); } catch {}
+}
+
+function showUid() {
+  $('#uid-box').classList.remove('hidden');
+  $('#uid').value = db.uid || '';
+}
+
+$('#copy')?.addEventListener('click', async () => {
+  await navigator.clipboard.writeText(db.uid);
+  toast('Copied');
+});
+
+$('#claim')?.addEventListener('click', async (e) => {
+  e.target.disabled = true;
+  try {
+    await claimAdmin();
+    toast('This device is now a teacher.');
+    setTimeout(() => location.reload(), 900);
+  } catch (err) {
+    e.target.disabled = false;
+    toast(err?.code === 'permission-denied'
+      ? 'Refused. Either the rules are the old ones, or the teacher list is already closed.'
+      : (err?.message || 'That did not work'), 'bad');
+  }
+});
+
+$('#lock')?.addEventListener('click', async (e) => {
+  if (!confirm('Close the teacher list? New teachers will then have to be added from the Firebase console.')) return;
+  e.target.disabled = true;
+  try { await lockAdmins(); toast('Teacher list closed.'); setTimeout(() => location.reload(), 900); }
+  catch (err) { e.target.disabled = false; toast(err?.message || 'That did not work', 'bad'); }
+});
+
+$('#recheck')?.addEventListener('click', async () => {
+  const ok = await refreshRole();
+  toast(ok ? 'You are a teacher now' : 'Still not listed as a teacher', ok ? 'ok' : 'warn');
+  if (ok) location.reload();
+});
+</script>
+</body>
+</html>
